@@ -1,90 +1,98 @@
 <template>
-  <div class="container">
-    <h1>TODOアプリ</h1>
-    <div class="add-todo">
-      <input 
-        v-model="newTodo" 
-        @keyup.enter="addTodo" 
-        placeholder="新しいタスクを入力" 
-        type="text" 
-      />
-      <button @click="addTodo">追加</button>
-    </div>
-    <div class="todos-container">
-      <div v-if="todos.length === 0" class="empty-state">
-        タスクがありません。新しいタスクを追加してください。
+  <div class="app-container">
+    <header class="app-header">
+      <h1>TODOアプリ</h1>
+      <div v-if="isLoggedIn" class="user-info">
+        <span>{{ user.name }} さん</span>
+        <button @click="logout" class="logout-btn">ログアウト</button>
       </div>
-      <ul v-else class="todo-list">
-        <li v-for="todo in todos" :key="todo.id" class="todo-item">
-          <div class="todo-content">
-            <input 
-              type="checkbox" 
-              :checked="todo.completed" 
-              @change="toggleComplete(todo)"
-            />
-            <span :class="{ completed: todo.completed }">{{ todo.text }}</span>
-          </div>
-          <button @click="deleteTodo(todo)" class="delete-btn">削除</button>
-        </li>
-      </ul>
-    </div>
+    </header>
+
+    <main>
+      <!-- 認証済みの場合はTODOリストを表示 -->
+      <div v-if="isLoggedIn">
+        <TodoList 
+          :user="user" 
+          @auth-error="handleAuthError"
+        />
+      </div>
+      <!-- 未認証の場合はログイン/登録フォームを表示 -->
+      <div v-else>
+        <Login 
+          v-if="showLogin" 
+          @login-success="handleAuthSuccess" 
+          @toggle-auth="showLogin = false"
+        />
+        <Register 
+          v-else 
+          @register-success="handleAuthSuccess" 
+          @toggle-auth="showLogin = true"
+        />
+      </div>
+    </main>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
+import Login from './components/Login.vue';
+import Register from './components/Register.vue';
+import TodoList from './components/TodoList.vue';
 
 export default {
   name: 'App',
+  components: {
+    Login,
+    Register,
+    TodoList
+  },
   data() {
     return {
-      todos: [],
-      newTodo: '',
-      apiUrl: '/api/index.php'
+      user: null,
+      isLoggedIn: false,
+      showLogin: true
     };
   },
   mounted() {
-    this.fetchTodos();
+    // ページロード時に認証状態を確認
+    this.checkAuth();
   },
   methods: {
-    async fetchTodos() {
-      try {
-        const response = await axios.get(this.apiUrl);
-        this.todos = response.data;
-      } catch (error) {
-        console.error('Error fetching todos:', error);
-      }
-    },
-    async addTodo() {
-      if (!this.newTodo.trim()) return;
+    async checkAuth() {
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
       
-      try {
-        const response = await axios.post(this.apiUrl, { text: this.newTodo });
-        this.todos.push(response.data);
-        this.newTodo = '';
-      } catch (error) {
-        console.error('Error adding todo:', error);
+      if (token && storedUser) {
+        try {
+          // トークンの検証
+          const response = await axios.get('/api/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          this.user = response.data.user;
+          this.isLoggedIn = true;
+        } catch (error) {
+          console.error('認証エラー:', error);
+          this.logout();
+        }
       }
     },
-    async toggleComplete(todo) {
-      try {
-        await axios.put(this.apiUrl, {
-          id: todo.id,
-          completed: !todo.completed
-        });
-        
-        todo.completed = !todo.completed;
-      } catch (error) {
-        console.error('Error updating todo:', error);
-      }
+    handleAuthSuccess(user) {
+      this.user = user;
+      this.isLoggedIn = true;
     },
-    async deleteTodo(todo) {
-      try {
-        await axios.delete(this.apiUrl, { data: { id: todo.id } });
-        this.todos = this.todos.filter(t => t.id !== todo.id);
-      } catch (error) {
-        console.error('Error deleting todo:', error);
-      }
+    handleAuthError() {
+      // 認証エラーが発生した場合はログアウト
+      this.logout();
+    },
+    logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      this.user = null;
+      this.isLoggedIn = false;
+      this.showLogin = true;
     }
   }
 };
@@ -98,89 +106,49 @@ body {
   padding: 0;
 }
 
-.container {
-  max-width: 600px;
-  margin: 50px auto;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+.app-container {
+  max-width: 800px;
+  margin: 0 auto;
   padding: 20px;
 }
 
-h1 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-.add-todo {
-  display: flex;
-  margin-bottom: 20px;
-}
-
-input[type="text"] {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px 0 0 4px;
-  font-size: 16px;
-}
-
-button {
-  padding: 10px 20px;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 0 4px 4px 0;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s;
-}
-
-button:hover {
-  background-color: #388e3c;
-}
-
-.todo-list {
-  list-style: none;
-  padding: 0;
-}
-
-.todo-item {
+.app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 30px;
 }
 
-.todo-content {
+h1 {
+  color: #333;
+  margin: 0;
+}
+
+.user-info {
   display: flex;
   align-items: center;
 }
 
-.todo-content input[type="checkbox"] {
-  margin-right: 10px;
+.user-info span {
+  margin-right: 15px;
+  font-weight: bold;
 }
 
-.completed {
-  text-decoration: line-through;
-  color: #888;
-}
-
-.delete-btn {
+.logout-btn {
   background-color: #f44336;
+  color: white;
+  border: none;
   border-radius: 4px;
-  padding: 6px 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-.delete-btn:hover {
+.logout-btn:hover {
   background-color: #d32f2f;
 }
 
-.empty-state {
-  text-align: center;
-  color: #888;
-  padding: 20px;
+main {
+  margin-top: 20px;
 }
 </style> 
