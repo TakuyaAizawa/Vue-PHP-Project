@@ -1,0 +1,25 @@
+# 環境変数
+.env
+
+# Node.js
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# ビルド成果物
+frontend/dist
+
+# 一時ファイル
+.DS_Store
+.idea
+.vscode
+*.swp
+*.swo
+*.log
+*.tmp
+*.bak
+
+# Docker
+.docker-sync
+ 
