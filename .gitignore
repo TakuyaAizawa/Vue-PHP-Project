@@ -22,4 +22,9 @@ frontend/dist
 
 # Docker
 .docker-sync
- 
+ backend/public/index.html
+backend/public/css/app.1b0fd7ed.css
+backend/public/js/app.f02fb2e5.js
+backend/public/js/app.f02fb2e5.js.map
+backend/public/js/chunk-vendors.64f6a1a0.js
+backend/public/js/chunk-vendors.64f6a1a0.js.map

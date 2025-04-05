@@ -1,4 +1,5 @@
 <?php
-// TODOアプリのAPI
-echo "TODOアプリのAPIは /api にあります。";
+// フロントエンドページにリダイレクト
+header('Location: /public/');
+exit;
 ?> 
